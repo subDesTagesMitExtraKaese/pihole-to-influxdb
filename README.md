@@ -26,9 +26,10 @@ Optionally you can also configure the following:
 ### Authentication
 Certain parts of the API require you to be authenticated, this can be achieved by supplying the `PIHOLE_AUTHENTICATION` environment variable with the token from the API settings page of the admin interface.
 
-By doing this you'll gain access to two new measurements (tables):
+By doing this you'll gain access to some new measurements (tables):
 - query_types
 - forward_destinations
+- adlists
 
 and the following app modes:
 - `APP_MODE=Totals` *This is the default mode*

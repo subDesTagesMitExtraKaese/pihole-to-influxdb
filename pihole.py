@@ -72,6 +72,9 @@ class PiHole:
 
   def query(self, endpoint, params={}):
     return requests.get(f"{self.url}/admin/{endpoint}.php", params=params)
+
+  def post(self, endpoint, params={}):
+    return requests.post(f"{self.url}/admin/{endpoint}.php", params=params)
   
   def request_all_queries(self, start: float, end: float):
     """
@@ -152,6 +155,19 @@ class PiHole:
     else:
       return {}
 
+  def request_adlists(self):
+    if not self.token:
+      raise Exception("Token required")
+    params = {
+      "action": "get_adlists",
+      "token": self.token
+      }
+    json = self.post("scripts/pi-hole/php/groups", params=params).json()
+    if json:
+      return json['data']
+    else:
+      return []
+
   def get_totals_for_influxdb(self):
     summary = self.request_summary()
     timestamp = datetime.now().astimezone()
@@ -199,6 +215,19 @@ class PiHole:
           .tag("hostname", self.host) \
           .tag("destination", key.split('|')[0]) \
           .field("value", float(value))
+
+      adlists = self.request_adlists()
+      for adlist in adlists:
+        yield Point("adlists") \
+          .time(timestamp) \
+          .tag("hostname", self.host) \
+          .tag("adlist", adlist['address']) \
+          .field("enabled", adlist['enabled'] == 1) \
+          .field("date_added", adlist['date_added']) \
+          .field("date_modified", adlist['date_modified']) \
+          .field("date_updated", adlist['date_updated']) \
+          .field("number", adlist['number']) \
+          .field("comment", adlist['comment'])
   
   def get_queries_for_influxdb(self, query_date: datetime, sample_period: int):
     # Get all queries since last sample
@@ -258,6 +287,19 @@ class PiHole:
         .tag("hostname", self.host) \
         .tag("destination", key.split('|')[0]) \
         .field("queries", len(group_df))
+
+    adlists = self.request_adlists()
+    for adlist in adlists:
+      yield Point("adlists") \
+        .time(timestamp) \
+        .tag("hostname", self.host) \
+        .tag("adlist", adlist['address']) \
+        .field("enabled", adlist['enabled'] == 1) \
+        .field("date_added", adlist['date_added']) \
+        .field("date_modified", adlist['date_modified']) \
+        .field("date_updated", adlist['date_updated']) \
+        .field("number", adlist['number']) \
+        .field("comment", adlist['comment'])
 
   def get_query_logs_for_influxdb(self, query_date: datetime, sample_period: int):
     end_time = query_date.timestamp()
